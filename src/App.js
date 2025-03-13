@@ -6,7 +6,7 @@ function App() {
   return (
     <div className="App" style={{ backgroundColor: '#FE11C5', minHeight: '100vh' }}>
       <h1 style={{ color: 'white', textAlign: 'center', padding: '20px' }}>
-        Samgong Game
+        Samgong Succinct
       </h1>
       <SamgongTable />
     </div>

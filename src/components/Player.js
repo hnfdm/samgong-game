@@ -1,7 +1,7 @@
 import React from 'react';
 import Card from './Card';
 
-const Player = ({ name, chips, cards, active, isHuman, gamePhase }) => {
+const Player = ({ name, chips, cards, active, isHuman, gamePhase, image }) => {
   const score = cards.reduce((total, card) => {
     if (card.value === 'A') return total + 1;
     if (['10', 'J', 'Q', 'K'].includes(card.value)) return total + 10;
@@ -16,8 +16,9 @@ const Player = ({ name, chips, cards, active, isHuman, gamePhase }) => {
         opacity: active ? 1 : 0.5,
       }}
     >
+      <img src={image} alt={`${name}'s avatar`} className="player-image" />
       <h3>{name}</h3>
-      <p>Chips: {chips}</p>
+      <p>{chips} SUC</p>
       <p>Score: {gamePhase === 'showdown' ? score : '?'}</p>
       <div className="cards">
         {cards.map((card, index) => (

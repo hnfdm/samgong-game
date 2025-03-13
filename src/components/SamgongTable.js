@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Player from './Player';
-//import Card from './Card';
 import './SamgongTable.css';
 
+import asc from './asc.png';
+import puma from './puma.jpg';
+import addy from './Addy.jpg';
+import fakedev from './fakedev9999.jpg';
+
 const SamgongTable = () => {
-  const [deck, setDeck] = useState([]);
   const [players, setPlayers] = useState([
-    { id: 0, name: 'You', chips: 1000, cards: [], active: true },
-    { id: 1, name: 'NPC 1', chips: 1000, cards: [], active: true },
-    { id: 2, name: 'NPC 2', chips: 1000, cards: [], active: true },
-    { id: 3, name: 'NPC 3', chips: 1000, cards: [], active: true },
+    { id: 0, name: 'Prover', chips: 1000, cards: [], active: true, image: asc },
+    { id: 1, name: 'Puma', chips: 1000, cards: [], active: true , image: puma},
+    { id: 2, name: 'Addy', chips: 1000, cards: [], active: true , image: addy},
+    { id: 3, name: 'Fake Dev', chips: 1000, cards: [], active: true , image: fakedev},
     //{ id: 4, name: 'NPC 4', chips: 1000, cards: [], active: true },
   ]);
   const [pot, setPot] = useState(0);
@@ -42,18 +45,18 @@ const SamgongTable = () => {
 
   const dealCards = () => {
     const newDeck = createDeck();
-    const newPlayers = players.map(p => ({
-      ...p,
-      cards: [newDeck.shift(), newDeck.shift(), newDeck.shift()],
-      active: p.chips >= 50,
-    }));
-    setPlayers(newPlayers);
-    setDeck(newDeck);
+    setPlayers(prevPlayers =>
+      prevPlayers.map(p => ({
+        ...p,
+        cards: [newDeck.shift(), newDeck.shift(), newDeck.shift()],
+        active: p.chips >= 50,
+      }))
+    );
     setGamePhase('dealing');
     setTimeout(() => setGamePhase('showdown'), 1500); // Tunggu sebelum showdown
   };
 
-  const determineWinner = () => {
+  const determineWinner = useCallback((currentPot) => {
     const activePlayers = players.filter(p => p.active);
     const scores = activePlayers.map(p => ({
       player: p,
@@ -63,45 +66,47 @@ const SamgongTable = () => {
     const validScores = scores.filter(s => s.score <= 30);
     if (validScores.length === 0) {
       alert('All players bust! No winner.');
-      return;
+    } else {
+      const winner = validScores.reduce((prev, curr) => 
+        prev.score > curr.score ? prev : curr
+      );
+      alert(`${winner.player.name} wins with score ${winner.score}!`);
+      setPlayers(prevPlayers =>
+        prevPlayers.map(p =>
+          p.id === winner.player.id ? { ...p, chips: p.chips + currentPot } : p
+        )
+      );
     }
-
-    const winner = validScores.reduce((prev, curr) => 
-      prev.score > curr.score ? prev : curr
-    );
-    alert(`${winner.player.name} wins with score ${winner.score}!`);
-    setPlayers(players.map(p => 
-      p.id === winner.player.id ? { ...p, chips: p.chips + pot } : p
-    ));
-  };
+    setTimeout(() => startNewGame(), 5000); // Tunggu 5 detik sebelum game baru
+  }, [players]); // Dependensi hanya players, karena pot sekarang dilewatkan sebagai argumen
 
   const handleBet = (amount) => {
     if (gamePhase !== 'betting') return;
-    const newPlayers = players.map(p => {
-      if (p.id === 0 && p.chips >= amount) {
-        return { ...p, chips: p.chips - amount };
-      }
-      return p;
+    console.log('Before betting:', players);
+    setPlayers(prevPlayers => {
+      const newPlayers = prevPlayers.map(p => {
+        if (p.chips >= amount) {
+          console.log(`Player ${p.name} betting ${amount} SUC. Chips before: ${p.chips}`);
+          const updatedPlayer = { ...p, chips: p.chips - amount };
+          console.log(`Player ${p.name} chips after: ${updatedPlayer.chips}`);
+          return updatedPlayer;
+        }
+        console.log(`Player ${p.name} cannot bet ${amount} SUC. Chips: ${p.chips}`);
+        return { ...p, active: false };
+      });
+      console.log('New players state after betting:', newPlayers);
+      return newPlayers;
     });
-    setPlayers(newPlayers);
-    setPot(pot + amount * 5); // Semua pemain bertaruh jumlah yang sama
+    const activePlayerCount = players.filter(p => p.chips >= amount).length;
+    const newPot = amount * activePlayerCount;
+    setPot(newPot);
     dealCards();
-  };
-
-  const npcBet = () => {
-    const newPlayers = players.map(p => {
-      if (p.id !== 0 && p.chips >= 50) {
-        return { ...p, chips: p.chips - 50 };
-      }
-      return p;
-    });
-    setPlayers(newPlayers);
-    return 50 * 4; // 4 NPC bertaruh 50 masing-masing
+    // Panggil determineWinner dengan pot saat ini setelah kartu dibagikan
+    setTimeout(() => determineWinner(newPot), 1500); // Sinkronkan dengan showdown
   };
 
   const startNewGame = () => {
-    const npcBetAmount = npcBet();
-    setPot(npcBetAmount);
+    setPot(0);
     setGamePhase('betting');
   };
 
@@ -111,14 +116,15 @@ const SamgongTable = () => {
 
   useEffect(() => {
     if (gamePhase === 'showdown') {
-      determineWinner();
+      // determineWinner dipanggil di handleBet, jadi tidak perlu di sini
     }
-  }, [gamePhase]);
+  }, [gamePhase, determineWinner]);
 
   return (
     <div className="samgong-table">
+      {console.log('Rendered players:', players)}
       <div className="game-info">
-        <p>Pot: {pot}</p>
+        <p>Pot: {pot} SUC</p>
         <p>Phase: {gamePhase}</p>
       </div>
 
@@ -135,12 +141,12 @@ const SamgongTable = () => {
 
       {gamePhase === 'betting' && (
         <div className="controls">
-          <button onClick={() => handleBet(50)}>Bet 50</button>
-          <button onClick={() => handleBet(100)}>Bet 100</button>
+          <button onClick={() => handleBet(50)}>Bet 50 SUC</button>
+          <button onClick={() => handleBet(100)}>Bet 100 SUC</button>
         </div>
       )}
 
-      <button onClick={startNewGame} className="new-game-btn">New Game</button>
+      <button onClick={() => window.location.reload()} className="new-game-btn">New Game</button>
     </div>
   );
 };
